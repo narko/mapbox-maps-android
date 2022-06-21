@@ -79,22 +79,3 @@ private fun HomeScreen() {
     }
   }
 }
-
-@Preview(showBackground = true)
-@Composable
-private fun DefaultMapPreview() {
-  MapboxMap(
-    modifier = Modifier.fillMaxSize(),
-    mapInitOptions = MapInitOptions(
-      context = LocalContext.current,
-      mapOptions = MapOptions.Builder()
-        .applyDefaultParams(LocalContext.current)
-        .optimizeForTerrain(true)
-        .contextMode(ContextMode.UNIQUE)
-        .build(),
-      cameraOptions = CameraOptions.Builder().center(Point.fromLngLat(LONGITUDE, LATITUDE))
-        .zoom(12.0).build(),
-      styleUri = Style.MAPBOX_STREETS
-    )
-  )
-}
