@@ -1,13 +1,9 @@
 package com.mapbox.maps.renderer
 
 import android.opengl.GLES20
-import android.os.SystemClock
 import android.view.Choreographer
 import android.view.Surface
-import androidx.annotation.AnyThread
-import androidx.annotation.UiThread
-import androidx.annotation.VisibleForTesting
-import androidx.annotation.WorkerThread
+import androidx.annotation.*
 import com.mapbox.maps.logE
 import com.mapbox.maps.logI
 import com.mapbox.maps.logW
@@ -22,7 +18,6 @@ import javax.microedition.khronos.egl.EGL10
 import javax.microedition.khronos.egl.EGL11
 import javax.microedition.khronos.egl.EGLSurface
 import kotlin.concurrent.withLock
-import kotlin.math.pow
 
 /**
  * The render thread is responsible for the communication between any thread and the render thread it creates.
@@ -84,7 +79,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   private var renderNotSupported = false
 
   internal var fpsChangedListener: OnFpsChangedListener? = null
-  private var timeElapsed = 0L
+    set(value) = fpsAdjuster.setFpsChangedListener(value)
 
   // TODO needed for workaround until issue is fixed in gl-native
   internal var renderDestroyCallChain = false
@@ -101,13 +96,13 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     mapboxRenderer: MapboxRenderer,
     mapboxWidgetRenderer: MapboxWidgetRenderer,
     translucentSurface: Boolean,
-    antialiasingSampleCount: Int,
+    antialiasingSampleCount: Int
   ) {
     this.translucentSurface = translucentSurface
     this.mapboxRenderer = mapboxRenderer
     this.widgetRenderer = mapboxWidgetRenderer
     this.eglCore = EGLCore(translucentSurface, antialiasingSampleCount)
-    this.fpsAdjuster = FpsAdjuster(eglCore)
+    this.fpsAdjuster = FpsAdjuster()
     this.eglSurface = eglCore.eglNoSurface
     this.widgetTextureRenderer = TextureRenderer()
     renderHandlerThread = RenderHandlerThread().apply { start() }
@@ -242,8 +237,14 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     }
   }
 
-  private fun draw() {
-    fpsAdjuster.preRender()
+  private fun draw(frameTimeNanos: Long) {
+    val proceedFrameRender = fpsAdjuster.preRender(frameTimeNanos)
+    if (!proceedFrameRender) {
+      // when we have FPS limited and desire to skip core render - we must schedule new draw call
+      // otherwise map may remain in not fully loaded state
+      postPrepareRenderFrame()
+      return
+    }
     if (widgetRenderer.hasWidgets()) {
       if (widgetRenderer.needTextureUpdate) {
         widgetRenderer.updateTexture()
@@ -263,7 +264,6 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     // it makes sense to execute them after drawing a map but before swapping buffers
     // **note** this queue also holds snapshot tasks
     drainQueue(renderEventQueue)
-    fpsAdjuster.postRender()
     if (needViewAnnotationSync && viewAnnotationMode == ViewAnnotationUpdateMode.MAP_SYNCHRONIZED) {
       // when we're syncing view annotations with the map -
       // we swap buffers the next frame to achieve better synchronization with view annotations update
@@ -428,6 +428,13 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     prepareRenderFrame(creatingSurface = true)
   }
 
+  @MainThread
+  fun setScreenRefreshRate(refreshRate: Float) {
+    renderHandlerThread.post {
+      fpsAdjuster.setScreenRefreshRate(refreshRate.toInt())
+    }
+  }
+
   @UiThread
   fun onSurfaceCreated(surface: Surface, width: Int, height: Int) {
     lock.withLock {
@@ -449,7 +456,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   override fun doFrame(frameTimeNanos: Long) {
     // it makes sense to draw not only when EGL config is prepared but when native renderer is created
     if (renderThreadPrepared && !paused) {
-      draw()
+      draw(frameTimeNanos)
     }
     awaitingNextVsync = false
     // It's critical to drain queue after setting `awaitingNextVsync` to false as some tasks may recursively schedule other tasks when executed.
@@ -539,7 +546,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   }
 
   companion object {
-    private const val TAG = "Mbgl-RenderThread"
+    internal const val TAG = "Mbgl-RenderThread"
     /**
      * If we hit some issue caused by invalid state (most likely caused by GPU driver) we start
      * rescheduling configuration with that delay in order not to overflood handler thread message queue.

@@ -18,7 +18,7 @@ internal class MapboxTextureViewRenderer : MapboxRenderer, TextureView.SurfaceTe
       mapboxRenderer = this,
       mapboxWidgetRenderer = widgetRenderer,
       translucentSurface = true,
-      antialiasingSampleCount = antialiasingSampleCount,
+      antialiasingSampleCount = antialiasingSampleCount
     )
     textureView.let {
       it.isOpaque = false

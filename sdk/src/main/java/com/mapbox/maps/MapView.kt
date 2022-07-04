@@ -113,6 +113,7 @@ open class MapView : FrameLayout, MapPluginProviderDelegate, MapControllable {
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
     mapController.onAttachedToWindow(this)
+    mapController.setScreenRefreshRate(display.refreshRate)
   }
 
   @SuppressLint("CustomViewStyleable")

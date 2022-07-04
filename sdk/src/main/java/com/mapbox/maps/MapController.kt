@@ -226,6 +226,10 @@ internal class MapController : MapPluginProviderDelegate, MapControllable {
     }
   }
 
+  internal fun setScreenRefreshRate(refreshRate: Float) {
+    renderer.renderThread.setScreenRefreshRate(refreshRate)
+  }
+
   //
   // Telemetry
   //
