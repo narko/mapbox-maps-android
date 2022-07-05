@@ -50,7 +50,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   private var widgetRenderCreated = false
   private val widgetTextureRenderer: TextureRenderer
 
-  private val fpsAdjuster: FpsAdjuster
+  private val fpsManager: FpsManager
 
   @Volatile
   @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -79,7 +79,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   private var renderNotSupported = false
 
   internal var fpsChangedListener: OnFpsChangedListener? = null
-    set(value) = fpsAdjuster.setFpsChangedListener(value)
+    set(value) = fpsManager.setFpsChangedListener(value)
 
   // TODO needed for workaround until issue is fixed in gl-native
   internal var renderDestroyCallChain = false
@@ -102,12 +102,12 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     this.mapboxRenderer = mapboxRenderer
     this.widgetRenderer = mapboxWidgetRenderer
     this.eglCore = EGLCore(translucentSurface, antialiasingSampleCount)
-    this.fpsAdjuster = FpsAdjuster()
+    this.fpsManager = FpsManager()
     this.eglSurface = eglCore.eglNoSurface
     this.widgetTextureRenderer = TextureRenderer()
     renderHandlerThread = RenderHandlerThread().apply {
       start()
-      post { fpsAdjuster.prepareHandler() }
+      post { fpsManager.prepareHandler() }
     }
   }
 
@@ -117,7 +117,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     mapboxWidgetRenderer: MapboxWidgetRenderer,
     handlerThread: RenderHandlerThread,
     eglCore: EGLCore,
-    fpsAdjuster: FpsAdjuster,
+    fpsManager: FpsManager,
     widgetTextureRenderer: TextureRenderer,
   ) {
     this.translucentSurface = false
@@ -125,7 +125,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     this.widgetRenderer = mapboxWidgetRenderer
     this.renderHandlerThread = handlerThread
     this.eglCore = eglCore
-    this.fpsAdjuster = fpsAdjuster
+    this.fpsManager = fpsManager
     this.widgetTextureRenderer = widgetTextureRenderer
     this.eglSurface = eglCore.eglNoSurface
   }
@@ -241,7 +241,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   }
 
   private fun draw(frameTimeNanos: Long) {
-    val proceedFrameRender = fpsAdjuster.preRender(frameTimeNanos)
+    val proceedFrameRender = fpsManager.preRender(frameTimeNanos)
     if (!proceedFrameRender) {
       // when we have FPS limited and desire to skip core render - we must schedule new draw call
       // otherwise map may remain in not fully loaded state
@@ -267,7 +267,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     // it makes sense to execute them after drawing a map but before swapping buffers
     // **note** this queue also holds snapshot tasks
     drainQueue(renderEventQueue)
-    fpsAdjuster.postRender()
+    fpsManager.postRender()
     if (needViewAnnotationSync && viewAnnotationMode == ViewAnnotationUpdateMode.MAP_SYNCHRONIZED) {
       // when we're syncing view annotations with the map -
       // we swap buffers the next frame to achieve better synchronization with view annotations update
@@ -435,7 +435,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   @MainThread
   fun setScreenRefreshRate(refreshRate: Float) {
     renderHandlerThread.post {
-      fpsAdjuster.setScreenRefreshRate(refreshRate.toInt())
+      fpsManager.setScreenRefreshRate(refreshRate.toInt())
     }
   }
 
@@ -452,7 +452,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
   @AnyThread
   fun setMaximumFps(fps: Int) {
     renderHandlerThread.post {
-      fpsAdjuster.updateMaxFps(fps)
+      fpsManager.updateMaxFps(fps)
     }
   }
 
@@ -537,7 +537,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
       }
     }
     renderHandlerThread.stop()
-    fpsAdjuster.destroy()
+    fpsManager.destroy()
     mapboxRenderer.map = null
   }
 

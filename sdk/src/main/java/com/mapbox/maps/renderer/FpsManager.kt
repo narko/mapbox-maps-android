@@ -11,7 +11,7 @@ import com.mapbox.maps.logW
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-internal class FpsAdjuster {
+internal class FpsManager {
   private var userDefinedRefreshRate = -1
   private var userDefinedRefreshPeriodNs = -1L
 
