@@ -105,7 +105,10 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     this.fpsAdjuster = FpsAdjuster()
     this.eglSurface = eglCore.eglNoSurface
     this.widgetTextureRenderer = TextureRenderer()
-    renderHandlerThread = RenderHandlerThread().apply { start() }
+    renderHandlerThread = RenderHandlerThread().apply {
+      start()
+      post { fpsAdjuster.prepareHandler() }
+    }
   }
 
   @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -264,6 +267,7 @@ internal class MapboxRenderThread : Choreographer.FrameCallback {
     // it makes sense to execute them after drawing a map but before swapping buffers
     // **note** this queue also holds snapshot tasks
     drainQueue(renderEventQueue)
+    fpsAdjuster.postRender()
     if (needViewAnnotationSync && viewAnnotationMode == ViewAnnotationUpdateMode.MAP_SYNCHRONIZED) {
       // when we're syncing view annotations with the map -
       // we swap buffers the next frame to achieve better synchronization with view annotations update
