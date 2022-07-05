@@ -12,9 +12,7 @@ internal open class MapboxSurfaceRenderer : MapboxRenderer {
   constructor(
     antialiasingSampleCount: Int
   ) {
-    widgetRenderer = MapboxWidgetRenderer(
-      antialiasingSampleCount = antialiasingSampleCount,
-    )
+    widgetRenderer = MapboxWidgetRenderer(antialiasingSampleCount = antialiasingSampleCount,)
     renderThread = MapboxRenderThread(
       mapboxRenderer = this,
       mapboxWidgetRenderer = widgetRenderer,
