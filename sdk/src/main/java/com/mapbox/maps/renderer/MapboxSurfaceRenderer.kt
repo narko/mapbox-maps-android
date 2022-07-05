@@ -9,10 +9,10 @@ internal open class MapboxSurfaceRenderer : MapboxRenderer {
 
   override val widgetRenderer: MapboxWidgetRenderer
 
-  constructor(
-    antialiasingSampleCount: Int
-  ) {
-    widgetRenderer = MapboxWidgetRenderer(antialiasingSampleCount = antialiasingSampleCount,)
+  constructor(antialiasingSampleCount: Int) {
+    widgetRenderer = MapboxWidgetRenderer(
+      antialiasingSampleCount = antialiasingSampleCount,
+    )
     renderThread = MapboxRenderThread(
       mapboxRenderer = this,
       mapboxWidgetRenderer = widgetRenderer,
