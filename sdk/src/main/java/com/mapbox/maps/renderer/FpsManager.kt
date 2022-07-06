@@ -136,7 +136,7 @@ internal class FpsManager {
       logI(
         TAG,
         "Performing pacing, current index=$drawnFrameIndex," +
-          " previous drawn=$previousDrawnFrameIndex"
+          " previous drawn=$previousDrawnFrameIndex, proceed with rendering=${drawnFrameIndex > previousDrawnFrameIndex}"
       )
     }
     if (drawnFrameIndex > previousDrawnFrameIndex) {
