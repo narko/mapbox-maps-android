@@ -171,6 +171,7 @@ class DebugModeActivity : AppCompatActivity() {
         binding.fpsView.text = getString(R.string.fps, it.toInt().toString())
       }
     }
+    binding.mapView.setMaximumFps(24)
   }
 
   companion object {

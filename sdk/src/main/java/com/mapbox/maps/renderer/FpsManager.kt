@@ -9,15 +9,15 @@ import com.mapbox.maps.BuildConfig
 import com.mapbox.maps.logI
 import com.mapbox.maps.logW
 import kotlin.math.pow
-import kotlin.math.roundToInt
 
 internal class FpsManager {
   private var userDefinedRefreshRate = -1
-  private var userDefinedRefreshPeriodNs = -1L
+  private var userDefinedRatio = 0.0
 
   private var deviceRefreshRate = -1
   private var deviceRefreshPeriodNs = -1L
   private var previousRefreshNs = -1L
+  private var previousDrawnFrameIndex = 0
   private var frameRenderTimeAccumulatedNs = 0L
 
   private var preRenderTimeNs = -1L
@@ -46,6 +46,9 @@ internal class FpsManager {
     deviceRefreshRate = screenRefreshRate
     if (userDefinedRefreshRate == -1) {
       userDefinedRefreshRate = screenRefreshRate
+    } else {
+      userDefinedRatio = userDefinedRefreshRate.toDouble() / deviceRefreshRate
+      logI(TAG, "User defined ratio is $userDefinedRatio")
     }
     if (BuildConfig.DEBUG) {
       logI(
@@ -60,12 +63,8 @@ internal class FpsManager {
   fun updateMaxFps(updatedMaxFps: Int) {
     if (userDefinedRefreshRate != updatedMaxFps) {
       userDefinedRefreshRate = updatedMaxFps
-      userDefinedRefreshPeriodNs = ONE_SECOND_NS / updatedMaxFps
       if (BuildConfig.DEBUG) {
-        logI(
-          TAG,
-          "User set max FPS to $userDefinedRefreshRate (${userDefinedRefreshPeriodNs / 10.0.pow(6.0)} as refresh period)"
-        )
+        logI(TAG, "User set max FPS to $userDefinedRefreshRate")
       }
     }
   }
@@ -84,7 +83,7 @@ internal class FpsManager {
     // clear any scheduled task as new render call is about to happen
     handler?.removeCallbacksAndMessages(null)
     // no need to perform neither pacing nor FPS calculation when setMaxFps / setOnFpsChangedListener was called by the user
-    if (userDefinedRefreshPeriodNs == -1L && fpsChangedListener == null) {
+    if (userDefinedRatio == 0.0 && fpsChangedListener == null) {
       return true
     }
     preRenderTimeNs = System.nanoTime()
@@ -103,13 +102,12 @@ internal class FpsManager {
       }
     }
     previousRefreshNs = frameTimeNs
-    var proceedRendering = true
-    if (userDefinedRefreshPeriodNs != -1L) {
-      // TODO pacing
-    }
     // we always increase choreographer tick by one + add number of skipped frames for consistent results
     choreographerTicks += skippedNow + 1
-    return proceedRendering
+    if (userDefinedRatio != 0.0) {
+      return performPacing()
+    }
+    return true
   }
 
   fun postRender() {
@@ -117,7 +115,7 @@ internal class FpsManager {
       val frameRenderTimeNs = System.nanoTime() - preRenderTimeNs
       frameRenderTimeAccumulatedNs += frameRenderTimeNs
       // normally we update FPS counter once a second
-      if (choreographerTicks >= userDefinedRefreshRate) {
+      if (choreographerTicks >= deviceRefreshRate) {
         calculateFps(listener)
       } else {
         // however to produce correct values we also update FPS after IDLE_TIMEOUT_MS
@@ -132,6 +130,23 @@ internal class FpsManager {
     }
   }
 
+  private fun performPacing(): Boolean {
+    val drawnFrameIndex = (choreographerTicks * userDefinedRatio).toInt()
+    if (BuildConfig.DEBUG) {
+      logI(
+        TAG,
+        "Performing pacing, current index=$drawnFrameIndex," +
+          " previous drawn=$previousDrawnFrameIndex"
+      )
+    }
+    if (drawnFrameIndex > previousDrawnFrameIndex) {
+      previousDrawnFrameIndex = drawnFrameIndex
+      return true
+    }
+    choreographerSkips++
+    return false
+  }
+
   private fun calculateFps(listener: OnFpsChangedListener) {
     val droppedFps = choreographerSkips.toDouble() / choreographerTicks
     val fps = (1.0 - droppedFps) * deviceRefreshRate
@@ -140,11 +155,12 @@ internal class FpsManager {
     if (BuildConfig.DEBUG) {
       logW(
         TAG,
-        "VSYNC based FPS is ${fps.roundToInt()}," +
+        "VSYNC based FPS is $fps," +
           " average core rendering time is ${averageRenderTimeNs / 10.0.pow(6.0)} ms," +
           " missed $choreographerSkips out of $choreographerTicks VSYNC pulses"
       )
     }
+    previousDrawnFrameIndex = 0
     frameRenderTimeAccumulatedNs = 0L
     choreographerTicks = 0
     choreographerSkips = 0
@@ -156,7 +172,7 @@ internal class FpsManager {
   }
 
   private companion object {
-    private const val TAG = "Mbgl-FpsAdjuster"
+    private const val TAG = "Mbgl-FpsManager"
     private const val IDLE_TIMEOUT_MS = 50L
     private val ONE_SECOND_NS = 10.0.pow(9.0).toLong()
     private val ONE_MILLISECOND_NS = 10.0.pow(6.0).toLong()
