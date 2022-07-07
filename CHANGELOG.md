@@ -13,6 +13,9 @@ Mapbox welcomes participation and contributions from everyone.
 ## Bug fixes 🐞
 * Support altitude interpolation in location component, and pass through GPS altitude information from the DefaultLocationProvider. ([1478](https://github.com/mapbox/mapbox-maps-android/pull/1478))
 
+# main
+* Introduce experimental `ModelLayer.modelCastShadows` and `LocationPuck3D.modelCastShadows` property. ([1480](https://github.com/mapbox/mapbox-maps-android/pull/1480))
+
 # 10.7.0-beta.1 June 29, 2022
 ## Breaking changes ⚠️
 * Remove deprecated `FollowPuckViewportStateOptions.animationDurationMs` from experimental viewport plugin. ([1421](https://github.com/mapbox/mapbox-maps-android/pull/1421))
