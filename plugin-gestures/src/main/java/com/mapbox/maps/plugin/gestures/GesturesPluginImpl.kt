@@ -1393,7 +1393,7 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase, MapStyleObserve
     // Prevent drag start in area around horizon to avoid sharp map movements
     val topMapMargin = 0.04 * mapTransformDelegate.getSize().height
     val reprojectErrorMargin = min(10.0, topMapMargin / 2)
-    val point = ScreenCoordinate(pixel.x, pixel.y - topMapMargin)
+    val point = ScreenCoordinate(pixel.x, pixel.y - topMapMargin).sanitizeNaN()
     val coordinate = mapCameraManagerDelegate.coordinateForPixel(point)
     val roundtripPoint = mapCameraManagerDelegate.pixelForCoordinate(coordinate)
     return (roundtripPoint.y >= point.y + reprojectErrorMargin)
@@ -1785,6 +1785,16 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase, MapStyleObserve
     const val ROTATION_ANGLE_THRESHOLD = 3.0f
     const val MAX_SHOVE_ANGLE = 45.0f
   }
+}
+
+/**
+ * Sanitize ScreenCoordinate to avoid passing NaN to core
+ */
+private fun ScreenCoordinate.sanitizeNaN(): ScreenCoordinate {
+  return ScreenCoordinate(
+    if (!x.isNaN()) x else 0.0,
+    if (!y.isNaN()) x else 0.0
+  )
 }
 
 /**
