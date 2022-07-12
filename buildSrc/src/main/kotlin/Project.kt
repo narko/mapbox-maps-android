@@ -1,16 +1,16 @@
 object AndroidVersions {
   const val minSdkVersion = 21
-  const val targetSdkVersion = 33
-  const val compileSdkVersion = 33
+  const val targetSdkVersion = 30
+  const val compileSdkVersion = 30
   object AndroidAuto {
     const val minSdkVersion = 23
-    const val targetSdkVersion = 33
-    const val compileSdkVersion = 33
+    const val targetSdkVersion = 30
+    const val compileSdkVersion = 31
   }
   object Compose {
     const val minSdkVersion = 23
-    const val targetSdkVersion = 33
-    const val compileSdkVersion = 33
+    const val targetSdkVersion = 30
+    const val compileSdkVersion = 31
   }
 }
 
