@@ -12,7 +12,7 @@ android {
   compileSdk = AndroidVersions.AndroidAuto.compileSdkVersion
   defaultConfig {
     applicationId = "com.mapbox.maps.testapp.auto"
-    minSdk = AndroidVersions.AndroidAuto.minSdkVersion
+    minSdk = 29 //AndroidVersions.AndroidAuto.minSdkVersion
     targetSdk = AndroidVersions.AndroidAuto.targetSdkVersion
     versionCode = 1
     versionName = "0.1.0"
@@ -47,6 +47,7 @@ dependencies {
   implementation(project(":extension-androidauto"))
   implementation(project(":sdk"))
   implementation(Dependencies.googleCarAppLibrary)
+  implementation("androidx.car.app:app-automotive:1.2.0-rc01")
   implementation(Dependencies.kotlin)
   implementation(Dependencies.androidxAppCompat)
   implementation(Dependencies.androidxCoreKtx)
